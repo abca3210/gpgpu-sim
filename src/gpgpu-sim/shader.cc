@@ -64,7 +64,7 @@ std::list<unsigned> shader_core_ctx::get_regs_written( const inst_t &fvt ) const
    }
    return result;
 }
-
+//TODO:simt_core_cluster
 shader_core_ctx::shader_core_ctx( class gpgpu_sim *gpu, 
                                   class simt_core_cluster *cluster,
                                   unsigned shader_id,
@@ -72,7 +72,7 @@ shader_core_ctx::shader_core_ctx( class gpgpu_sim *gpu,
                                   const struct shader_core_config *config,
                                   const struct memory_config *mem_config,
                                   shader_core_stats *stats )
-   : core_t( gpu, NULL, config->warp_size, config->n_thread_per_shader ),
+   : core_t( gpu, NULL, config->warp_size, config->n_thread_per_shader ),//(the abstract functional class for a core)
      m_barriers( this, config->max_warps_per_shader, config->max_cta_per_core, config->max_barriers_per_cta, config->warp_size ),
      m_dynamic_warp_id(0)
 {
@@ -598,11 +598,11 @@ void shader_core_ctx::fetch()
     if( !m_inst_fetch_buffer.m_valid ) {
         // find an active warp with space in instruction buffer that is not already waiting on a cache miss
         // and get next 1-2 instructions from i-cache...
-        for( unsigned i=0; i < m_config->max_warps_per_shader; i++ ) {
+        for( unsigned i=0; i < m_config->max_warps_per_shader; i++ ) {//循環調度程序，最後調度的warp ID儲存在m_last_warp_fetched中
             unsigned warp_id = (m_last_warp_fetched+1+i) % m_config->max_warps_per_shader;
 
-            // this code checks if this warp has finished executing and can be reclaimed
-            if( m_warp[warp_id].hardware_done() && !m_scoreboard->pendingWrites(warp_id) && !m_warp[warp_id].done_exit() ) {
+            // this code checks if this warp has finished executing and can be reclaimed,檢查此warp是否已完成執行並可以回收
+            if( m_warp[warp_id].hardware_done() && !m_scoreboard->pendingWrites(warp_id) && !m_warp[warp_id].done_exit() ) {//第一個if語句檢查warp是否已完成執行
                 bool did_exit=false;
                 for( unsigned t=0; t<m_config->warp_size;t++) {
                     unsigned tid=warp_id*m_config->warp_size+t;
@@ -620,8 +620,8 @@ void shader_core_ctx::fetch()
                     m_warp[warp_id].set_done_exit();
             }
 
-            // this code fetches instructions from the i-cache or generates memory requests
-            if( !m_warp[warp_id].functional_done() && !m_warp[warp_id].imiss_pending() && m_warp[warp_id].ibuffer_empty() ) {
+            // this code fetches instructions from the i-cache or generates memory requests,從i-cache中fetch指令或生成內存請求
+            if( !m_warp[warp_id].functional_done() && !m_warp[warp_id].imiss_pending() && m_warp[warp_id].ibuffer_empty() ) {//第二個if語句內部，則在命中或生成存儲器訪問時（如果未命中）從指令高速緩存中實際獲取數據。
                 address_type pc  = m_warp[warp_id].get_pc();
                 address_type ppc = pc + PROGRAM_MEM_START;
                 unsigned nbytes=16; 
@@ -676,7 +676,7 @@ void shader_core_ctx::func_exec_inst( warp_inst_t &inst )
         inst.generate_mem_accesses();
 }
 
-void shader_core_ctx::issue_warp( register_set& pipe_reg_set, const warp_inst_t* next_inst, const active_mask_t &active_mask, unsigned warp_id )
+void shader_core_ctx::issue_warp( register_set& pipe_reg_set, const warp_inst_t* next_inst, const active_mask_t &active_mask, unsigned warp_id )//將指令發佈到其合適的執行管道，在此函數中，通過調用shader_core_ctx::func_exec_inst（）在功能上執行指令
 {
     warp_inst_t** pipe_reg = pipe_reg_set.get_free();
     assert(pipe_reg);
@@ -2438,8 +2438,8 @@ unsigned int shader_core_config::max_cta( const kernel_info_t &k ) const
 
     return result;
 }
-
-void shader_core_ctx::cycle()
+//TODO:shader_core_ctx::cycle
+void shader_core_ctx::cycle()//以相反順序模擬內核的pipeline stages。
 {
 	m_stats->shader_cycles[m_sid]++;
     writeback();
@@ -3172,7 +3172,7 @@ simt_core_cluster::simt_core_cluster( class gpgpu_sim *gpu,
     }
 }
 
-void simt_core_cluster::core_cycle()
+void simt_core_cluster::core_cycle()//按順序循環每個SIMT cores
 {
     for( std::list<unsigned>::iterator it = m_core_sim_order.begin(); it != m_core_sim_order.end(); ++it ) {
         m_core[*it]->cycle();
@@ -3263,7 +3263,7 @@ bool simt_core_cluster::icnt_injection_buffer_full(unsigned size, bool write)
         request_size = READ_PACKET_SIZE;
     return ! ::icnt_has_buffer(m_cluster_id, request_size);
 }
-
+//TODO:提供了一個接口,已將數據包注入network
 void simt_core_cluster::icnt_inject_request_packet(class mem_fetch *mf)
 {
     // stats
@@ -3299,8 +3299,8 @@ void simt_core_cluster::icnt_inject_request_packet(class mem_fetch *mf)
    else 
       ::icnt_push(m_cluster_id, m_config->mem2device(destination), (void*)mf, mf->size());
 }
-
-void simt_core_cluster::icnt_cycle()
+//TODO:simt_core_cluster::icnt_cycle()
+void simt_core_cluster::icnt_cycle()//將memory request從interconnection network push到SIMT Core Cluster's response FIFO,然後pop,並將其發送到相應core的instruction cache or LDST unit
 {
     if( !m_response_fifo.empty() ) {
         mem_fetch *mf = m_response_fifo.front();

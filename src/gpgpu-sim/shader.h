@@ -298,7 +298,7 @@ enum concrete_scheduler
     NUM_CONCRETE_SCHEDULERS
 };
 
-class scheduler_unit { //this can be copied freely, so can be used in std containers.
+class scheduler_unit { //this can be copied freely, so can be used in std containers.TODO:每個對象負責從其warp集中選擇一個或多個指令並發出這些指令已執行
 public:
     scheduler_unit(shader_core_stats* stats, shader_core_ctx* shader, 
                    Scoreboard* scoreboard, simt_stack** simt, 
