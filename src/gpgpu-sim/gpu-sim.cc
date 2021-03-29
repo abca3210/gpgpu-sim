@@ -28,7 +28,6 @@
 
 
 #include "gpu-sim.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -1154,7 +1153,7 @@ void gpgpu_sim::issue_block2core()
 
 unsigned long long g_single_step=0; // set this in gdb to single step the pipeline
 
-void gpgpu_sim::cycle()
+void gpgpu_sim::cycle()//$為所有架構提供clock，包括Memory Partition's queues, DRAM channel and L2 cache bank.
 {
    int clock_mask = next_clock_domain();
 
@@ -1163,18 +1162,23 @@ void gpgpu_sim::cycle()
       for (unsigned i=0;i<m_shader_config->n_simt_clusters;i++) 
          m_cluster[i]->icnt_cycle(); 
    }
+   //$Popping from Memory Controller to NoC
     if (clock_mask & ICNT) {
         // pop from memory controller to interconnect
-        for (unsigned i=0;i<m_memory_config->m_n_mem_sub_partition;i++) {
+        for (unsigned i=0;i<m_memory_config->m_n_mem_sub_partition;i++) {//$m_n_mem_sub_partition = m_n_mem * m_n_sub_partition_per_memory_channel(gpu-sim.h);
+            //$Defines mem_fetch, a communication structure that models a memory request.
+            //$m_memory_sub_partition
             mem_fetch* mf = m_memory_sub_partition[i]->top();
             //TODO:先看這邊
-            if (mf) {//看有沒有空間
-                unsigned response_size = mf->get_is_write()?mf->get_ctrl_size():mf->size();
-                if ( ::icnt_has_buffer( m_shader_config->mem2device(i), response_size ) ) {
+            if (mf) {//$看有沒有空間(mf = 0)是真
+                unsigned response_size = mf->get_is_write()?mf->get_ctrl_size():mf->size();//
+                if ( ::icnt_has_buffer( m_shader_config->mem2device(i), response_size ) ) { //$獲取一個node number和packet size作為輸入發送，如果source node的input buffer有足夠空間則回傳true
                     if (!mf->get_is_write()) 
                        mf->set_return_timestamp(gpu_sim_cycle+gpu_tot_sim_cycle);
                     mf->set_status(IN_ICNT_TO_SHADER,gpu_sim_cycle+gpu_tot_sim_cycle);
+                    //$injects memory requests into the interconnect from the Memory Partition's L2->icnt queue
                     ::icnt_push( m_shader_config->mem2device(i), mf->get_tpc(), mf, response_size );
+                    //$request tracker 會在此處丟棄該memory request的entry，指示已完成為該request的Memory Partition。
                     m_memory_sub_partition[i]->pop();
                 } else {
                     gpu_stall_icnt2sh++;
