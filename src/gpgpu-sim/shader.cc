@@ -567,7 +567,7 @@ void shader_core_ctx::decode()
     if( m_inst_fetch_buffer.m_valid ) {
         // decode 1 or 2 instructions and place them into ibuffer
         address_type pc = m_inst_fetch_buffer.m_pc;
-        const warp_inst_t* pI1 = ptx_fetch_inst(pc);
+        const warp_inst_t* pI1 = ptx_fetch_inst(pc);//ptx_fetch_inst()是return function_info::pc_to_instruction(pc);
         m_warp[m_inst_fetch_buffer.m_warp_id].ibuffer_fill(0,pI1);
         m_warp[m_inst_fetch_buffer.m_warp_id].inc_inst_in_pipeline();
         if( pI1 ) {
@@ -592,7 +592,7 @@ void shader_core_ctx::decode()
         m_inst_fetch_buffer.m_valid = false;
     }
 }
-
+ int xx =1; 
 void shader_core_ctx::fetch()
 {
     if( !m_inst_fetch_buffer.m_valid ) {
@@ -624,6 +624,10 @@ void shader_core_ctx::fetch()
             if( !m_warp[warp_id].functional_done() && !m_warp[warp_id].imiss_pending() && m_warp[warp_id].ibuffer_empty() ) {//第二個if語句內部，則在命中或生成存儲器訪問時（如果未命中）從指令高速緩存中實際獲取數據。
                 address_type pc  = m_warp[warp_id].get_pc();
                 address_type ppc = pc + PROGRAM_MEM_START;
+               
+                printf("^^^%d,%d,%d",pc, ppc,xx);
+                xx++;
+                
                 unsigned nbytes=16; 
                 unsigned offset_in_block = pc & (m_config->m_L1I_config.get_line_sz()-1);
                 if( (offset_in_block+nbytes) > m_config->m_L1I_config.get_line_sz() )

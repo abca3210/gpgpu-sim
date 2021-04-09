@@ -83,15 +83,15 @@ unsigned long long  gpu_tot_sim_cycle = 0;
 
 
 // performance counter for stalls due to congestion.
-unsigned int gpu_stall_dramfull = 0; 
-unsigned int gpu_stall_icnt2sh = 0;
+unsigned int gpu_stall_dramfull = 0; //連接到 Dram 通道的互連輸出的週期數已停止。
+unsigned int gpu_stall_icnt2sh = 0;//由於互連擁塞，dram 通道停止的週期數。
 
 /* Clock Domains */
 
-#define  CORE  0x01
-#define  L2    0x02
-#define  DRAM  0x04
-#define  ICNT  0x08  
+#define  CORE  0x01 //the SIMT Core Cluster clock domain
+#define  L2    0x02 //the L2 cache clock domain, which applies to all logic in the memory partition unit except DRAM
+#define  DRAM  0x04 //DRAM clock domain
+#define  ICNT  0x08 //the interconnection network clock domain 
 
 
 #define MEM_LATENCY_STAT_IMPL
@@ -1113,10 +1113,13 @@ void dram_t::dram_log( int task )
    }
 }
 
-//Find next clock domain and increment its time
+//Find next clock domain and increment its time(查找下一個時鐘域並增加其時間)
 int gpgpu_sim::next_clock_domain(void) 
 {
-   double smallest = min3(core_time,icnt_time,dram_time);
+   double smallest = min3(core_time,icnt_time,dram_time);// 括號裡的東西是time of next rising edge
+
+   //printf("###%f ,#%f ,#%f ",core_time,icnt_time,dram_time);
+
    int mask = 0x00;
    if ( l2_time <= smallest ) {
       smallest = l2_time;
@@ -1135,10 +1138,11 @@ int gpgpu_sim::next_clock_domain(void)
       mask |= CORE;
       core_time += m_config.core_period;
    }
+   //printf("###%d ",mask);
    return mask;
 }
 
-void gpgpu_sim::issue_block2core()
+void gpgpu_sim::issue_block2core()//issue new thread blocks to core,init the threads inside the new blocks,hierarchical block distribution
 {
     unsigned last_issued = m_last_cluster_issue; 
     for (unsigned i=0;i<m_shader_config->n_simt_clusters;i++) {
@@ -1155,8 +1159,7 @@ unsigned long long g_single_step=0; // set this in gdb to single step the pipeli
 
 void gpgpu_sim::cycle()//$為所有架構提供clock，包括Memory Partition's queues, DRAM channel and L2 cache bank.
 {
-   int clock_mask = next_clock_domain();
-
+   int clock_mask = next_clock_domain();//next_clock_domain() = 查找下一個時鐘域並增加其時間
    if (clock_mask & CORE ) {
        // shader core loading (pop from ICNT into core) follows CORE clock
       for (unsigned i=0;i<m_shader_config->n_simt_clusters;i++) 
@@ -1171,7 +1174,7 @@ void gpgpu_sim::cycle()//$為所有架構提供clock，包括Memory Partition's 
             mem_fetch* mf = m_memory_sub_partition[i]->top();
             //TODO:先看這邊
             if (mf) {//$看有沒有空間(mf = 0)是真
-                unsigned response_size = mf->get_is_write()?mf->get_ctrl_size():mf->size();//
+                unsigned response_size = mf->get_is_write()?mf->get_ctrl_size():mf->size();//m_access.is_write()
                 if ( ::icnt_has_buffer( m_shader_config->mem2device(i), response_size ) ) { //$獲取一個node number和packet size作為輸入發送，如果source node的input buffer有足夠空間則回傳true
                     if (!mf->get_is_write()) 
                        mf->set_return_timestamp(gpu_sim_cycle+gpu_tot_sim_cycle);
@@ -1181,7 +1184,7 @@ void gpgpu_sim::cycle()//$為所有架構提供clock，包括Memory Partition's 
                     //$request tracker 會在此處丟棄該memory request的entry，指示已完成為該request的Memory Partition。
                     m_memory_sub_partition[i]->pop();
                 } else {
-                    gpu_stall_icnt2sh++;
+                    gpu_stall_icnt2sh++;//由於互連擁塞，dram 通道停止的週期數。
                 }
             } else {
                m_memory_sub_partition[i]->pop();
@@ -1205,7 +1208,7 @@ void gpgpu_sim::cycle()//$為所有架構提供clock，包括Memory Partition's 
       for (unsigned i=0;i<m_memory_config->m_n_mem_sub_partition;i++) {
           //move memory request from interconnect into memory partition (if not backed up)
           //Note:This needs to be called in DRAM clock domain if there is no L2 cache in the system
-          if ( m_memory_sub_partition[i]->full() ) {
+          if ( m_memory_sub_partition[i]->full() ) {//連接到 Dram 通道的互連輸出的週期數已停止。
              gpu_stall_dramfull++;
           } else {
               mem_fetch* mf = (mem_fetch*) icnt_pop( m_shader_config->mem2device(i) );

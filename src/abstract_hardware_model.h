@@ -36,7 +36,7 @@ class kernel_info_t;
 #define MAX_CTA_PER_SHADER 32
 #define MAX_BARRIERS_PER_CTA 16
 
-enum _memory_space_t {
+enum _memory_space_t { //Memory space type (register, local, shared, global, ...)
    undefined_space=0,
    reg_space,
    local_space,
@@ -72,7 +72,7 @@ typedef unsigned addr_t;
 
 // the following are operations the timing model can see 
 
-enum uarch_op_t {
+enum uarch_op_t { //Type of operation (ALU_OP, SFU_OP, LOAD_OP, STORE_OP, ...)
    NO_OP=-1,
    ALU_OP=1,
    SFU_OP,
@@ -140,8 +140,8 @@ enum mem_operation_t {
     TEX
 };
 typedef enum mem_operation_t mem_operation;
-
-enum _memory_op_t {
+//TODO:看是不是load
+enum _memory_op_t { //Defines whether instruction accesses (load or store) memory.
 	no_memory_op = 0,
 	memory_load,
 	memory_store
@@ -163,7 +163,7 @@ struct dim3 {
 
 void increment_x_then_y_then_z( dim3 &i, const dim3 &bound);
 
-class kernel_info_t {
+class kernel_info_t {//保存內核的資訊。它包含內核函數（function_info）、網格和塊大小等資訊，以及該內核（ptx_thread_info）內活動線程清單。
 public:
 //   kernel_info_t()
 //   {
@@ -363,7 +363,7 @@ struct cudaChannelFormatDesc {
    enum cudaChannelFormatKind f;
 };
 
-struct cudaArray {
+struct cudaArray { //用於在 GPGPU-Sim 中保存陣列數據的結構。它使用時，主要程式調用cuda_malloc，cuda_memcopy，cuda_free等。
    void *devPtr;
    int devPtr32;
    struct cudaChannelFormatDesc desc;
@@ -388,7 +388,7 @@ enum cudaTextureReadMode {
    cudaReadModeNormalizedFloat
 };
 
-struct textureReference {
+struct textureReference {//cuda運行時間用於指定texture references.的數據類型。
    int                           normalized;
    enum cudaTextureFilterMode    filterMode;
    enum cudaTextureAddressMode   addressMode[3];
@@ -412,7 +412,7 @@ struct textureReferenceAttr {
     {  }
 };
 
-class gpgpu_functional_sim_config 
+class gpgpu_functional_sim_config //功能模擬器配置選項。
 {
 public:
     void reg_options(class OptionParser * opp);
@@ -443,7 +443,7 @@ private:
     unsigned m_texcache_linesize;
 };
 
-class gpgpu_t {
+class gpgpu_t { //Class gpgpu_sim (the top-level GPU timing simulation model) is derived from this class.
 public:
     gpgpu_t( const gpgpu_functional_sim_config &config );
     void* gpu_malloc( size_t size );
@@ -533,7 +533,7 @@ struct gpgpu_ptx_sim_arg {
 
 typedef std::list<gpgpu_ptx_sim_arg> gpgpu_ptx_sim_arg_list_t;
 
-class memory_space_t {
+class memory_space_t { //存儲空間的資訊，如記憶體類型和此記憶體空間的bank數量。
 public:
    memory_space_t() { m_type = undefined_space; m_bank=0; }
    memory_space_t( const enum _memory_space_t &from ) { m_type = from; m_bank = 0; }
@@ -564,8 +564,8 @@ private:
 const unsigned MAX_MEMORY_ACCESS_SIZE = 128;
 typedef std::bitset<MAX_MEMORY_ACCESS_SIZE> mem_access_byte_mask_t;
 #define NO_PARTIAL_WRITE (mem_access_byte_mask_t())
-
-#define MEM_ACCESS_TYPE_TUP_DEF \
+//計時模擬器中對不同類型的記憶體的不同類型的訪問。
+#define MEM_ACCESS_TYPE_TUP_DEF \ 
 MA_TUP_BEGIN( mem_access_type ) \
    MA_TUP( GLOBAL_ACC_R ), \
    MA_TUP( LOCAL_ACC_R ), \
@@ -591,7 +591,7 @@ MEM_ACCESS_TYPE_TUP_DEF
 
 const char * mem_access_type_str(enum mem_access_type access_type); 
 
-enum cache_operator_type {
+enum cache_operator_type {//PTX 提供的不同類型的 L1 數據快取存取行為
     CACHE_UNDEFINED, 
 
     // loads
@@ -608,7 +608,9 @@ enum cache_operator_type {
     CACHE_WRITE_THROUGH // .wt
 };
 
-class mem_access_t {
+class mem_access_t { //在計時模擬器中包含每個記憶體訪問的資訊。此類具有有關記憶體訪問類型、請求位址、
+                     //數據大小和在進入記憶體的扭曲內線程的主動掩膜的資訊。此類用作mem_fetch類的參數之一，
+                     //該參數基本上用於每個記憶體訪問。此類用於在兩個不同級別的記憶體之間對接並通過互連。
 public:
    mem_access_t() { init(); }
    mem_access_t( mem_access_type type, 
@@ -706,7 +708,7 @@ struct dram_callback_t {
    class ptx_thread_info *thread;
 };
 
-class inst_t {
+class inst_t {//Base class of all instruction classes.本類包含有關指令類型和大小、教學位址、輸入和輸出、延遲和記憶體範圍（memory_space_t）的資訊。
 public:
     inst_t()
     {
@@ -802,7 +804,7 @@ enum divergence_support_t {
 
 const unsigned MAX_ACCESSES_PER_INSN_PER_THREAD = 8;
 
-class warp_inst_t: public inst_t {
+class warp_inst_t: public inst_t { //Data of instructions need during timing simulation,從warp_inst_t繼承下來的每個指令（ptx_instruction）都包含計時和功能類比的數據
 public:
     // constructors
     warp_inst_t() 
@@ -1004,7 +1006,7 @@ size_t get_kernel_code_size( class function_info *entry );
  * This abstract class used as a base for functional and performance and simulation, it has basic functional simulation
  * data structures and procedures. 
  */
-class core_t {
+class core_t { //功能模型和性能模型核心的抽象基礎類。shader_core_ctx（在計時模型中實現 SIMT 核心的類）源自此類。
     public:
         core_t( gpgpu_sim *gpu, 
                 kernel_info_t *kernel,

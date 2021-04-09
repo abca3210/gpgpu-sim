@@ -1369,7 +1369,7 @@ struct shader_core_stats_pod {
     unsigned *m_active_fu_lanes;
     unsigned *m_active_fu_mem_lanes;
     unsigned *m_n_diverge;    // number of divergence occurring in this shader
-    unsigned gpgpu_n_load_insn;
+    unsigned gpgpu_n_load_insn;//Number of global/local load instructions executed.
     unsigned gpgpu_n_store_insn;
     unsigned gpgpu_n_shmem_insn;
     unsigned gpgpu_n_tex_insn;
@@ -1384,7 +1384,7 @@ struct shader_core_stats_pod {
     unsigned *shader_cycle_distro;
     unsigned *last_shader_cycle_distro;
     unsigned *num_warps_issuable;
-    unsigned gpgpu_n_stall_shd_mem;
+    unsigned gpgpu_n_stall_shd_mem;//Number of pipeline stall cycles at the memory stage
 
     //memory access classification
     int gpgpu_n_mem_read_local;

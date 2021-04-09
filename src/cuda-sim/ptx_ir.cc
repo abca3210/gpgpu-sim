@@ -284,7 +284,7 @@ std::list<ptx_instruction*>::iterator function_info::find_next_real_instruction(
    return i;
 }
 
-void function_info::create_basic_blocks()
+void function_info::create_basic_blocks()//將單個指令分組到基本塊（basic_block_t）
 {
    std::list<ptx_instruction*> leaders;
    std::list<ptx_instruction*>::iterator i, l;
@@ -440,7 +440,7 @@ operand_info* function_info::find_break_target( ptx_instruction * p_break_insn )
 
    return NULL; 
 }
-void function_info::connect_basic_blocks( ) //iterate across m_basic_blocks of function, connecting basic blocks together
+void function_info::connect_basic_blocks( ) //iterate across m_basic_blocks of function, connecting basic blocks together ,connect_basic_blocks（）連接基本塊以形成控制流圖
 {
    std::vector<basic_block_t*>::iterator bb_itr;
    std::vector<basic_block_t*>::iterator bb_target_itr;

@@ -303,7 +303,7 @@ class _cuda_device_id *GPGPUSim_Init()
 {
 	static _cuda_device_id *the_device = NULL;
 	if( !the_device ) {
-		gpgpu_sim *the_gpu = gpgpu_ptx_sim_init_perf();
+		gpgpu_sim *the_gpu = gpgpu_ptx_sim_init_perf();//at the first CUDA API call
 
 		cudaDeviceProp *prop = (cudaDeviceProp *) calloc(sizeof(cudaDeviceProp),1);
 		snprintf(prop->name,256,"GPGPU-Sim_v%s", g_gpgpusim_version_string );
