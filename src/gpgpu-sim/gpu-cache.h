@@ -538,7 +538,8 @@ public:
 
     // accessors for cache bandwidth availability 
     virtual bool data_port_free() const = 0; 
-    virtual bool fill_port_free() const = 0; 
+    virtual bool fill_port_free() const = 0;
+    int *L1_request_div_hit=(int*)malloc( sizeof(int) * 35 ); //0412
 };
 
 bool was_write_sent( const std::list<cache_event> &events );

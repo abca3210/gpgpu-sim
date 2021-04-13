@@ -1890,7 +1890,7 @@ private:
     std::list<unsigned> m_core_sim_order;
     std::list<mem_fetch*> m_response_fifo;
 };
-
+//simt core到injection port buffer的接口
 class shader_memory_interface : public mem_fetch_interface {
 public:
     shader_memory_interface( shader_core_ctx *core, simt_core_cluster *cluster ) { m_core=core; m_cluster=cluster; }

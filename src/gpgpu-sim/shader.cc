@@ -625,8 +625,6 @@ void shader_core_ctx::fetch()
                 address_type pc  = m_warp[warp_id].get_pc();
                 address_type ppc = pc + PROGRAM_MEM_START;
                
-                printf("^^^%d,%d,%d",pc, ppc,xx);
-                xx++;
                 
                 unsigned nbytes=16; 
                 unsigned offset_in_block = pc & (m_config->m_L1I_config.get_line_sz()-1);
@@ -1192,10 +1190,16 @@ void ldst_unit::get_cache_stats(cache_stats &cs) {
         cs += m_L1T->get_stats();
 
 }
-
+int L1_req_div[35]={0};//0412
 void ldst_unit::get_L1D_sub_stats(struct cache_sub_stats &css) const{
     if(m_L1D)
         m_L1D->get_sub_stats(css);
+
+         for(int i=1;i<33;i++){//412
+        L1_req_div[i]+=*(m_L1D->L1_request_div_hit+i);
+        //printf("%d. %d ",i,L1_req_div[i]);
+    }
+    //printf("\n");
 }
 void ldst_unit::get_L1C_sub_stats(struct cache_sub_stats &css) const{
     if(m_L1C)
@@ -2049,7 +2053,12 @@ void gpgpu_sim::shader_print_cache_stats( FILE *fout ) const{
         }
         fprintf(fout, "\tL1D_total_cache_pending_hits = %u\n", total_css.pending_hits);
         fprintf(fout, "\tL1D_total_cache_reservation_fails = %u\n", total_css.res_fails);
-        total_css.print_port_stats(fout, "\tL1D_cache"); 
+        total_css.print_port_stats(fout, "\tL1D_cache");
+        for(int i=1;i<33;i++){
+            printf("%d. %d ",i,L1_req_div[i]);//412
+        }
+        printf("\n");
+        memset(L1_req_div,0, sizeof(L1_req_div));
     }
 
     // L1C
@@ -3267,7 +3276,7 @@ bool simt_core_cluster::icnt_injection_buffer_full(unsigned size, bool write)
         request_size = READ_PACKET_SIZE;
     return ! ::icnt_has_buffer(m_cluster_id, request_size);
 }
-//TODO:提供了一個接口,已將數據包注入network
+//TODO:提供了一個接口,以將數據包注入network
 void simt_core_cluster::icnt_inject_request_packet(class mem_fetch *mf)
 {
     // stats
