@@ -294,7 +294,7 @@ struct core_config {
 // bounded stack that implements simt reconvergence using pdom mechanism from MICRO'07 paper
 const unsigned MAX_WARP_SIZE = 32;
 typedef std::bitset<MAX_WARP_SIZE> active_mask_t;
-#define MAX_WARP_SIZE_SIMT_STACK  MAX_WARP_SIZE
+#define MAX_WARP_SIZE_STACK  MAX_WARP_SIZE
 typedef std::bitset<MAX_WARP_SIZE_SIMT_STACK> simt_mask_t;
 typedef std::vector<address_type> addr_vector_t;
 
@@ -829,7 +829,7 @@ public:
     }
 int warp_div;//0412
     // modifiers
-int begin_time;
+int begin_time;//0412
     void broadcast_barrier_reduction( const active_mask_t& access_mask);
     void do_atomic(bool forceDo=false);
     void do_atomic( const active_mask_t& access_mask, bool forceDo=false );
